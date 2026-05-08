@@ -36,6 +36,10 @@ class ApiError extends Error {
   static conflict(message = "Resource already exists") {
     return new ApiError(409, message);
   }
+
+  static forbidden(message = "Forbidden") {
+    return new ApiError(403, message);
+  }
 }
 
 export default ApiError;
