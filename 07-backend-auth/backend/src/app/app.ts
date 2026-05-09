@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
+import { globalErrorHandler, notFoundHandler } from "../common/middlewares/error.middleware.js";
 
 export const buildApp = (): Application => {
   const app = express();
@@ -10,7 +11,7 @@ export const buildApp = (): Application => {
   app.use(cors()); // Enable CORS
   app.use(express.json()); // Parse JSON bodies
 
-  // Health check route
+  // -- Routes --
   app.get("/health", (req: Request, res: Response) => {
     res.status(200).json({
       success: true,
@@ -18,6 +19,13 @@ export const buildApp = (): Application => {
       timestamp: new Date().toISOString(),
     });
   });
+
+  app.get("/test-error", () => {
+    throw new Error("This is a random system crash!")
+  });
+
+  app.use(notFoundHandler);
+  app.use(globalErrorHandler);
 
   return app;
 };
