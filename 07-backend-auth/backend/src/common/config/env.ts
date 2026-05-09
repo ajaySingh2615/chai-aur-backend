@@ -4,6 +4,7 @@ import "dotenv/config";
 const envSchema = z.object({
   PORT: z.string().default("5000").transform(Number),
   NODE_ENV: z.enum(["development", "production"]).default("development"),
+  DATABASE_URL: z.string().url()
 });
 
 const _env = envSchema.safeParse(process.env);
