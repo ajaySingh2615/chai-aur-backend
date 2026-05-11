@@ -13,8 +13,7 @@ class AuthController {
       const newUser = await authService.register(userData);
 
       // 3. send the success response back to the client
-      const response = new ApiResponse(
-        201,
+      const response = ApiResponse.created(
         newUser,
         "User registered successfully",
       );
