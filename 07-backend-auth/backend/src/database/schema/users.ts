@@ -13,7 +13,7 @@ import { email } from "zod";
 // Define an enum for user roles
 export const roleEnum = pgEnum("role", ["candidate", "employer", "admin"]);
 
-export const userTables = pgTable("users", {
+export const usersTable = pgTable("users", {
   // Primary Identication
   id: uuid("id").primaryKey().defaultRandom(),
 
