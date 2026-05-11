@@ -2,11 +2,12 @@ import bcrypt from "bcryptjs";
 import { ApiError } from "../../common/exceptions/api-error.js";
 import { RegisterDTO } from "./auth.dto.js";
 import { authRepository } from "./auth.repository.js";
+import { hashPassword } from "../../common/utils/hashing.js";
 
 class AuthService {
   // Registers a new user into the system
   async register(userData: RegisterDTO) {
-    const { name, email, password, role } = userData;
+    const { name, email, password } = userData;
 
     // 1. Check if the email is already in use
     const existingUser = await authRepository.findByEmail(email);
@@ -15,15 +16,14 @@ class AuthService {
     }
 
     // 2. Hash the password before saving (using bcryptjs)
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const hashedPassword = await hashPassword(password);
 
     // 3. Create the user in the database
     const newUser = await authRepository.create({
       name,
       email,
       password: hashedPassword,
-      role,
     });
 
     // 4. Sanitize the user object before returning (remove password and tokens)
