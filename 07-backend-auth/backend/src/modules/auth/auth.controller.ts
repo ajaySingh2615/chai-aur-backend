@@ -24,6 +24,38 @@ class AuthController {
       next(error);
     }
   };
+
+  login = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // the data is already validated by zod loginSchema
+      const loginData = req.body;
+
+      // call the service to verify credentials and generate tokens
+      const { user, accessToken, refreshToken } =
+        await authService.login(loginData);
+
+      // configure our highly secure cookie options
+      const cookieOptions = {
+        httpOnly: true, // Stops XSS attacks by preventing client-side JS from accessing the cookie
+        secure: process.env.NODE_ENV === "production", // Only send cookie over HTTPS in production
+        sameSite: "strict" as const, // Prevents CSRF attacks by not sending cookie on cross-site requests
+        maxAge: 7 * 24 * 60 * 60 * 1000, // Cookie expires in 7 days (same as refresh token)
+      };
+
+      // attach the refresh token to the cookie
+      res.cookie("refreshToken", refreshToken, cookieOptions);
+
+      // send the success response (Only sending the Access Token and User info
+      const response = ApiResponse.ok(
+        { user, accessToken },
+        "User logged in successfully",
+      );
+
+      res.status(response.statusCode).json(response);
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export const authController = new AuthController();

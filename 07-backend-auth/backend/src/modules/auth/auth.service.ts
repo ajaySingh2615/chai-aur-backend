@@ -1,8 +1,9 @@
 import bcrypt from "bcryptjs";
 import { ApiError } from "../../common/exceptions/api-error.js";
-import { RegisterDTO } from "./auth.dto.js";
+import { LoginDTO, RegisterDTO } from "./auth.dto.js";
 import { authRepository } from "./auth.repository.js";
-import { hashPassword } from "../../common/utils/hashing.js";
+import { comparePassword, hashPassword } from "../../common/utils/hashing.js";
+import { generateTokens } from "../../common/utils/jwt.js";
 
 class AuthService {
   // Registers a new user into the system
@@ -36,6 +37,53 @@ class AuthService {
     } = newUser;
 
     return safeUser;
+  }
+
+  // Authenticates a user and issues JWT tokens
+  async login(loginData: LoginDTO) {
+    const { email, password } = loginData;
+
+    // find user and check if they exist
+    const user = await authRepository.findByEmail(email);
+    if (!user) {
+      throw ApiError.unauthorized("Invalid email or password");
+    }
+
+    // verify the password
+    // (Edge Case Check: If user.password is null, it means they registered via Google/OAuth!)
+    if (!user.password) {
+      throw ApiError.unauthorized("Invalid email or password");
+    }
+
+    const isPasswordValid = await comparePassword(password, user.password);
+    if (!isPasswordValid) {
+      throw ApiError.unauthorized("Invalid email or password");
+    }
+
+    // generate the VIP badges (tokens)
+    const { accessToken, refreshToken } = generateTokens({
+      userId: user.id,
+      role: user.role,
+    });
+
+    // save the refresh token in the database so we can verify it later
+    await authRepository.update(user.id, { refreshToken });
+
+    // sanitize the user object before returning (remove password and tokens)
+    const {
+      password: _,
+      refreshToken: __,
+      emailVerificationToken,
+      passwordResetToken,
+      ...safeUser
+    } = user;
+
+    // return everything the controller will need
+    return {
+      user: safeUser,
+      accessToken,
+      refreshToken,
+    };
   }
 }
 

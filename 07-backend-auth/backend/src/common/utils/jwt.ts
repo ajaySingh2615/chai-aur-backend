@@ -7,7 +7,7 @@ export interface JwtPayload {
   role: string;
 }
 
-export const generateAccessToken = (payload: JwtPayload) => {
+export const generateTokens = (payload: JwtPayload) => {
   // 1. generate the short lived access token
   const accessToken = jwt.sign(payload, env.JWT_ACCESS_SECRET, {
     expiresIn: env.JWT_ACCESS_EXPIRES_IN as any,
