@@ -4,7 +4,13 @@ import "dotenv/config";
 const envSchema = z.object({
   PORT: z.string().default("5000").transform(Number),
   NODE_ENV: z.enum(["development", "production"]).default("development"),
-  DATABASE_URL: z.string().url()
+  DATABASE_URL: z.string().url(),
+
+  // Add our new JWT rules
+  JWT_ACCESS_SECRET: z.string(),
+  JWT_REFRESH_SECRET: z.string(),
+  JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
+  JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
 });
 
 const _env = envSchema.safeParse(process.env);
