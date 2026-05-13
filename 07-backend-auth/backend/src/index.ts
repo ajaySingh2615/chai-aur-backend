@@ -1,6 +1,7 @@
 import { buildApp } from "./app/app.js";
 import { env } from "./common/config/env.js";
-import { db, testConnection } from "./app/database/db.js";
+// import { db, testConnection } from "./app/database/db.js";
+import { db, testConnection } from "./database/db.js";
 
 const main = async () => {
   try {
@@ -17,8 +18,6 @@ const main = async () => {
   } catch (error) {
     console.error("Error starting server:", error);
     process.exit(1);
-
-
   }
 };
 
