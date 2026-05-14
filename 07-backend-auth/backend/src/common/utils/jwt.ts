@@ -18,5 +18,11 @@ export const generateTokens = (payload: JwtPayload) => {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN as any,
   });
 
+  // 3. A function to verify tokens (both access and refresh)
+
   return { accessToken, refreshToken };
+};
+
+export const verifyToken = (token: string, secret: string): JwtPayload => {
+  return jwt.verify(token, secret) as JwtPayload;
 };
