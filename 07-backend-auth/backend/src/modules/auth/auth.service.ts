@@ -3,7 +3,13 @@ import { ApiError } from "../../common/exceptions/api-error.js";
 import { LoginDTO, RegisterDTO } from "./auth.dto.js";
 import { authRepository } from "./auth.repository.js";
 import { comparePassword, hashPassword } from "../../common/utils/hashing.js";
-import { generateTokens } from "../../common/utils/jwt.js";
+import {
+  generateTokens,
+  JwtPayload,
+  verifyToken,
+} from "../../common/utils/jwt.js";
+import { env } from "../../common/config/env.js";
+import { th } from "zod/v4/locales/index.js";
 
 class AuthService {
   // Registers a new user into the system
@@ -84,6 +90,39 @@ class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+
+  async refreshToken(token: string) {
+    // verify and decode JWT -> extract userId and role -> if invalid, throw error
+    let decoded: JwtPayload;
+    try {
+      decoded = verifyToken(token, env.JWT_REFRESH_SECRET);
+    } catch (error) {
+      throw ApiError.unauthorized("Invalid or expired refresh token");
+    }
+
+    // find the user in DB by userId -> if not found, throw error
+    const user = await authRepository.findById(decoded.userId);
+    if (!user) {
+      throw ApiError.unauthorized("User not found");
+    }
+
+    // compare the provided refresh token with the one in DB -> if mismatch, throw error
+    if (user.refreshToken !== token) {
+      throw ApiError.unauthorized("Refresh token does not match");
+    }
+
+    // generate new tokens
+    const { accessToken, refreshToken } = generateTokens({
+      userId: user.id,
+      role: user.role,
+    });
+
+    // save the new refresh token in the database
+    await authRepository.update(user.id, { refreshToken });
+
+    // return both tokens
+    return { accessToken, refreshToken };
   }
 }
 
