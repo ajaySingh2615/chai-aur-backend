@@ -76,6 +76,28 @@ class AuthController {
       next(error);
     }
   };
+
+  logout = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // 1. Get the userId from the authenticated request (set by authenticate middleware)
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw ApiError.unauthorized("User not authenticated");
+      }
+
+      // 2. Call the service to clear the refresh token from the database
+      await authService.logout(userId);
+
+      // 3. Clear the refresh token cookie
+      res.clearCookie("refreshToken", refreshTokenCookieOptions);
+
+      // 4. Send the success response
+      const response = ApiResponse.ok(null, "User logged out successfully");
+      res.status(response.statusCode).json(response);
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export const authController = new AuthController();

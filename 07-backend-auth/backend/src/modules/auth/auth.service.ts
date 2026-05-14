@@ -124,6 +124,11 @@ class AuthService {
     // return both tokens
     return { accessToken, refreshToken };
   }
+
+  async logout(userId: string) {
+    // 1. Clear the refresh token from the database to invalidate it
+    await authRepository.update(userId, { refreshToken: null as any });
+  }
 }
 
 // export a single instance of the service so we don't have to create a new one every time we want to use it
