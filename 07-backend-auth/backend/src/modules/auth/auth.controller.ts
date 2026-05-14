@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { authService } from "./auth.service.js";
 import { ApiResponse } from "../../common/utils/api-response.js";
 import { refreshTokenCookieOptions } from "../../common/config/cookie.config.js";
+import { ApiError } from "../../common/exceptions/api-error.js";
 
 class AuthController {
   // Handles POST /api/v1/auth/register
@@ -44,6 +45,32 @@ class AuthController {
         "User logged in successfully",
       );
 
+      res.status(response.statusCode).json(response);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  refreshToken = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // 1. Extract the refresh token from the cookie
+      const refreshToken = req.cookies.refreshToken;
+      if (!refreshToken) {
+        throw ApiError.unauthorized("No refresh token provided");
+      }
+
+      // 2. Call the service to refresh tokens
+      const { accessToken, refreshToken: newRefreshToken } =
+        await authService.refreshToken(refreshToken);
+
+      // 3. Set the new refresh token in the cookie
+      res.cookie("refreshToken", newRefreshToken, refreshTokenCookieOptions);
+
+      // 4. Send the new access token in the response
+      const response = ApiResponse.ok(
+        { accessToken },
+        "Access token refreshed successfully",
+      );
       res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
