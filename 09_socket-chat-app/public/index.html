@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Socket Chat App</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: #1a1a1a;
+        color: white;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .chat-container {
+        width: 100%;
+        max-width: 500px;
+        height: 100vh;
+        max-height: 700px;
+        background-color: #0d0d0d;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+      }
+
+      .chat-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        border-radius: 10px 10px 0 0;
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+      }
+
+      .messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .message {
+        display: flex;
+        margin-bottom: 10px;
+        animation: slideIn 0.3s ease-in-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.sent {
+        justify-content: flex-end;
+      }
+
+      .message.received {
+        justify-content: flex-start;
+      }
+
+      .message-bubble {
+        max-width: 70%;
+        padding: 12px 16px;
+        border-radius: 18px;
+        word-wrap: break-word;
+        font-size: 14px;
+      }
+
+      .message.sent .message-bubble {
+        background-color: #667eea;
+        color: white;
+      }
+
+      .message.received .message-bubble {
+        background-color: #333333;
+        color: #e0e0e0;
+      }
+
+      .input-area {
+        display: flex;
+        gap: 10px;
+        padding: 15px 20px;
+        background-color: #1a1a1a;
+        border-top: 1px solid #333333;
+        border-radius: 0 0 10px 10px;
+      }
+
+      .message-input {
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #333333;
+        border-radius: 24px;
+        background-color: #2a2a2a;
+        color: white;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.3s;
+      }
+
+      .message-input:focus {
+        border-color: #667eea;
+      }
+
+      .message-input::placeholder {
+        color: #666666;
+      }
+
+      .send-btn {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 24px;
+        cursor: pointer;
+        font-weight: bold;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+
+      .send-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+      }
+
+      .send-btn:active {
+        transform: scale(0.98);
+      }
+
+      .messages::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .messages::-webkit-scrollbar-track {
+        background: #1a1a1a;
+      }
+
+      .messages::-webkit-scrollbar-thumb {
+        background: #444444;
+        border-radius: 4px;
+      }
+
+      .messages::-webkit-scrollbar-thumb:hover {
+        background: #555555;
+      }
+
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 12px 16px;
+        background-color: #333333;
+        border-radius: 18px;
+        width: fit-content;
+      }
+
+      .typing-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #999999;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing {
+        0%, 60%, 100% {
+          opacity: 0.5;
+          transform: translateY(0);
+        }
+        30% {
+          opacity: 1;
+          transform: translateY(-10px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-container">
+      <div class="chat-header">💬 Chat Room</div>
+      <div class="messages" id="messages">
+        <div class="message received" id="typingIndicator" style="display: none">
+          <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+        </div>
+      </div>
+      <div class="input-area">
+        <form id="messageForm">
+          <input
+            type="text"
+            id="messageInput"
+            class="message-input"
+            placeholder="Type a message..."
+          />
+          <button type="submit" class="send-btn">Send</button>
+        </form>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+
+      socket.on("server:message", (data) => {
+        console.log("message from server: ", data);
+        if (data.text) {
+          appendMessage(data.text, "received");
+        }
+      });
+
+      socket.on("server:typing", (data) => {
+        const typingIndicator = document.getElementById("typingIndicator");
+        typingIndicator.style.display = "flex";
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        clearTimeout(window.typingTimeout);
+        window.typingTimeout = setTimeout(() => {
+          typingIndicator.style.display = "none";
+        }, 1000);
+      });
+
+      const messagesDiv = document.getElementById("messages");
+      const messageInput = document.getElementById("messageInput");
+      const form = document.getElementById("messageForm");
+
+      // Store handler functions
+      const messageHandlers = [];
+
+      // Debounce function
+      function debounce(func, delay) {
+        let timeoutId;
+        return function (...args) {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => func(...args), delay);
+        };
+      }
+
+      // Append message to chat
+      function appendMessage(text, isSent = true) {
+        const messageElement = document.createElement("div");
+        messageElement.classList.add("message", isSent ? "sent" : "received");
+
+        const bubble = document.createElement("div");
+        bubble.classList.add("message-bubble");
+        bubble.textContent = text;
+
+        messageElement.appendChild(bubble);
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+
+      // Attach handler function to be called when message is sent
+      function onMessageInput(handler) {
+        if (typeof handler === "function") {
+          messageHandlers.push(handler);
+        }
+      }
+
+      // Log messages to console
+      onMessageInput((text) => {
+        console.log({ message: text });
+        socket.emit("user:message", { text });
+      });
+
+      // Debounced typing handler
+      const handleTyping = debounce(() => {
+        socket.emit("user:typing", { isTyping: true });
+      }, 300);
+
+      // Input event for typing indicator
+      messageInput.addEventListener("input", () => {
+        if (messageInput.value.length > 0) {
+          handleTyping();
+        }
+      });
+
+      // Form submission
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const text = messageInput.value.trim();
+
+        if (text) {
+          appendMessage(text, true);
+
+          // Call all attached handlers
+          messageHandlers.forEach((handler) => {
+            handler(text);
+          });
+
+          messageInput.value = "";
+          messageInput.focus();
+        }
+      });
+
+      // Auto-focus input
+      messageInput.focus();
+    </script>
+  </body>
+</html>
